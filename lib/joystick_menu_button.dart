@@ -104,6 +104,13 @@ class StickButtonMenuController extends ChangeNotifier {
 
   /// Toggle forced visibility.
   void toggle() => _forceVisible ? hide() : show();
+
+  /// Reset the stick position to the center (neutral zone).
+  ///
+  /// This method does not change the forced visibility state.
+  void resetButton() {
+    notifyListeners();
+  }
 }
 
 // =============================================================================
@@ -232,6 +239,9 @@ class _StickButtonMenuState<T> extends State<StickButtonMenu<T>>
   /// Min change in activation before we re-emit (throttles callback noise).
   static const double _activationEpsilon = 0.005;
 
+  /// Last known forceVisible state from the controller, used to detect resetButton calls.
+  bool _lastForceVisible = false;
+
   /// Animation that returns the stick smoothly to center on release.
   late final AnimationController _returnController;
   Animation<Offset>? _returnAnim;
@@ -245,9 +255,14 @@ class _StickButtonMenuState<T> extends State<StickButtonMenu<T>>
     )..addListener(_onReturnTick);
 
     widget.controller?.addListener(_onControllerChanged);
+    // Initialize _lastForceVisible.
+    _lastForceVisible = widget.controller?.forceVisible ?? false;
     // Reflect any initial forced-visible state.
     if (widget.controller?.forceVisible ?? false) {
       _visible = true;
+      // Center the stick initially.
+      _stickOffset = Offset.zero;
+      _hoveredIndex = -1;
     }
   }
 
@@ -310,19 +325,28 @@ class _StickButtonMenuState<T> extends State<StickButtonMenu<T>>
 
   void _onControllerChanged() {
     final force = widget.controller?.forceVisible ?? false;
-    if (force && !_visible) {
-      // Show centered in the host area; center is resolved at layout via build.
-      setState(() {
+    final forceChanged = force != _lastForceVisible;
+
+    if (forceChanged) {
+      if (force && !_dragging) {
+        // Show action: center the stick and show the menu.
         _visible = true;
-        // If we have no live touch center yet, center within the widget bounds.
-        if (!_dragging) {
-          _stickOffset = Offset.zero;
-          _hoveredIndex = -1;
-        }
-      });
-    } else if (!force && !_dragging) {
-      _hide();
+        _stickOffset = Offset.zero;
+        _hoveredIndex = -1;
+      } else if (!force && !_dragging) {
+        // Hide action: hide the menu.
+        _hide();
+      }
+    } else {
+      // forceVisible did not change, so this must be a resetButton call.
+      if (!_dragging) {
+        _stickOffset = Offset.zero;
+        _hoveredIndex = -1;
+        _activation = 0.0;
+        widget.onSelected?.call(null, Offset.zero, 0.0);
+      }
     }
+    _lastForceVisible = force;
   }
 
   // ---------------------------------------------------------------------------

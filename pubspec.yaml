@@ -1,7 +1,7 @@
 ﻿name: joystick_menu_button
 description: A floating, joystick-style radial menu for touch-driven controls in Flutter. Reveal on long-press and drag to select options.
 version: 0.1.0+1
-publish_to: https://pub.dev
+# publish_to: "https://pub.dev"
 homepage: https://github.com/mohsenzahab/joystick_menu_button
 repository: https://github.com/mohsenzahab/joystick_menu_button
 
